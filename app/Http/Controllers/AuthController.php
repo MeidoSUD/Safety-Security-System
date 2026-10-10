@@ -2,124 +2,100 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
+use App\Models\Company;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
     public function showLogin()
     {
-        return view('pages.login');
+        $demoUsers = User::with('company')->get();
+        return view('pages.login', compact('demoUsers'));
     }
 
     public function login(Request $request)
     {
-        $role = $request->input('role', 'admin');
-        
-        $rolesData = [
-            'admin' => [
-                'role' => 'admin',
-                'name' => 'م. عبدالرحمن المنصور',
-                'title' => 'المدير التنفيذي (Admin)',
-                'avatar' => '👑',
-                'email' => 'admin@nabico.sa',
-            ],
-            'manager' => [
-                'role' => 'manager',
-                'name' => 'أ. طارق الشمري',
-                'title' => 'مدير العمليات والعقود',
-                'avatar' => '🏢',
-                'email' => 'manager@nabico.sa',
-            ],
-            'supervisor' => [
-                'role' => 'supervisor',
-                'name' => 'سالم الدوسري',
-                'title' => 'مشرف الميدان والفنيين',
-                'avatar' => '🛡️',
-                'email' => 'supervisor@nabico.sa',
-            ],
-            'technician' => [
-                'role' => 'technician',
-                'name' => 'فني أحمد القحطاني',
-                'title' => 'فني صيانة شبكات ومضخات',
-                'avatar' => '👷',
-                'email' => 'tech@nabico.sa',
-            ],
-            'client' => [
-                'role' => 'client',
-                'name' => 'مدارس الأندلس الأهلية',
-                'title' => 'حساب العميل (مدرسة/مصنع)',
-                'avatar' => '🏫',
-                'email' => 'client@andalus-school.sa',
-            ],
-        ];
+        $role = $request->input('role');
+        $email = $request->input('email');
+        $password = $request->input('password');
 
-        $user = $rolesData[$role] ?? $rolesData['admin'];
+        // Quick demo login by role button
+        if ($role) {
+            $user = User::where('role', $role)->first();
+            if (!$user) {
+                $user = User::first();
+            }
+        } elseif ($email) {
+            // Standard credentials login
+            $user = User::where('email', $email)->first();
+            if (!$user || !Hash::check($password, $user->password)) {
+                // If demo password or fallback
+                if ($password !== 'password' && (!$user || !Hash::check($password, $user->password))) {
+                    return back()->with('error', 'بيانات تسجيل الدخول غير صحيحة')->withInput();
+                }
+            }
+        } else {
+            $user = User::where('role', 'admin')->first() ?? User::first();
+        }
 
-        session([
-            'authenticated' => true,
-            'user' => $user,
-            'user_role' => $user['role']
-        ]);
+        if ($user) {
+            Auth::login($user);
+            session([
+                'authenticated' => true,
+                'user' => [
+                    'id' => $user->id,
+                    'company_id' => $user->company_id,
+                    'role' => $user->role,
+                    'name' => $user->name,
+                    'title' => $user->job_title ?? $user->role_arabic_title,
+                    'avatar' => $user->avatar_emoji ?? '👤',
+                    'email' => $user->email,
+                ],
+                'user_role' => $user->role,
+                'company_id' => $user->company_id,
+            ]);
 
-        return redirect()->route('dashboard.home')->with('success', 'مرحباً بك، تم تسجيل الدخول بنجاح');
+            return redirect()->route('dashboard.home')->with('success', 'مرحباً بك: ' . $user->name . ' (' . ($user->job_title ?? $user->role_arabic_title) . ')');
+        }
+
+        return redirect()->route('login')->with('error', 'لم يتم العثور على الحساب');
     }
 
     public function switchRole(Request $request)
     {
         $role = $request->input('role', 'admin');
-        
-        $rolesData = [
-            'admin' => [
-                'role' => 'admin',
-                'name' => 'م. عبدالرحمن المنصور',
-                'title' => 'المدير التنفيذي (Admin)',
-                'avatar' => '👑',
-                'email' => 'admin@nabico.sa',
-            ],
-            'manager' => [
-                'role' => 'manager',
-                'name' => 'أ. طارق الشمري',
-                'title' => 'مدير العمليات والعقود',
-                'avatar' => '🏢',
-                'email' => 'manager@nabico.sa',
-            ],
-            'supervisor' => [
-                'role' => 'supervisor',
-                'name' => 'سالم الدوسري',
-                'title' => 'مشرف الميدان والفنيين',
-                'avatar' => '🛡️',
-                'email' => 'supervisor@nabico.sa',
-            ],
-            'technician' => [
-                'role' => 'technician',
-                'name' => 'فني أحمد القحطاني',
-                'title' => 'فني صيانة شبكات ومضخات',
-                'avatar' => '👷',
-                'email' => 'tech@nabico.sa',
-            ],
-            'client' => [
-                'role' => 'client',
-                'name' => 'مدارس الأندلس الأهلية',
-                'title' => 'حساب العميل (مدرسة/مصنع)',
-                'avatar' => '🏫',
-                'email' => 'client@andalus-school.sa',
-            ],
-        ];
+        $user = User::where('role', $role)->first();
 
-        $user = $rolesData[$role] ?? $rolesData['admin'];
+        if ($user) {
+            Auth::login($user);
+            session([
+                'authenticated' => true,
+                'user' => [
+                    'id' => $user->id,
+                    'company_id' => $user->company_id,
+                    'role' => $user->role,
+                    'name' => $user->name,
+                    'title' => $user->job_title ?? $user->role_arabic_title,
+                    'avatar' => $user->avatar_emoji ?? '👤',
+                    'email' => $user->email,
+                ],
+                'user_role' => $user->role,
+                'company_id' => $user->company_id,
+            ]);
 
-        session([
-            'authenticated' => true,
-            'user' => $user,
-            'user_role' => $user['role']
-        ]);
+            return back()->with('success', 'تم تبديل حساب العرض إلى: ' . ($user->job_title ?? $user->name));
+        }
 
-        return back()->with('success', 'تم تبديل الدور إلى: ' . $user['title']);
+        return back()->with('error', 'الدور المطلوب غير متوفر');
     }
 
     public function logout()
     {
-        session()->forget(['authenticated', 'user', 'user_role']);
+        Auth::logout();
+        session()->forget(['authenticated', 'user', 'user_role', 'company_id']);
         return redirect()->route('login')->with('info', 'تم تسجيل الخروج بنجاح');
     }
 }

@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-    <title>@yield('title', 'لوحة تحكم ERP | شركة نبيكو العربية للتشغيل والصيانة')</title>
+    <title>@yield('title', 'منصة SaaS لإدارة شركات السلامة والتشغيل والصيانة | نبيكو ERP')</title>
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -68,7 +68,6 @@
             from { opacity: 0; transform: scale(0.97) translateY(8px); }
             to { opacity: 1; transform: scale(1) translateY(0); }
         }
-        /* Mobile drawer animation */
         #mobile-sidebar.open {
             transform: translateX(0);
         }
@@ -85,10 +84,12 @@
         <!-- Sidebar Brand Header -->
         <div class="h-20 flex items-center justify-between px-6 border-b border-slate-800 bg-slate-950/70">
             <div class="flex items-center gap-3">
-                <img src="{{ asset('logo.png') }}" alt="نبيكو العربية" class="h-10 w-auto object-contain">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white text-xl font-black shadow-lg shadow-blue-500/30">
+                    🛡️
+                </div>
                 <div>
-                    <div class="text-sm font-extrabold text-white leading-tight">شركة نبيكو العربية</div>
-                    <div class="text-[10px] text-slate-400 font-semibold">للتشغيل والصيانة • نظام ERP</div>
+                    <div class="text-sm font-extrabold text-white leading-tight">نظام سلامة SaaS ERP</div>
+                    <div class="text-[10px] text-emerald-400 font-semibold">حلول متكاملة لشركات السلامة</div>
                 </div>
             </div>
 
@@ -107,11 +108,14 @@
                 'avatar' => '👑',
                 'email' => 'admin@nabico.sa',
             ]);
+            $unreadNotifs = \App\Models\SystemNotification::where('is_read', false)->count();
+            $unpaidVisitsCount = \App\Models\Visit::where('has_unpaid_parts', true)->count();
+            $pendingReqsCount = \App\Models\MaintenanceRequest::where('status', 'pending')->count();
         @endphp
-        <div class="p-4 mx-4 my-3 bg-slate-800/80 rounded-xl border border-slate-700/60 space-y-2">
+        <div class="p-4 mx-4 my-3 bg-slate-800/80 rounded-xl border border-slate-700/60 space-y-2.5">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-lg bg-slate-700 flex items-center justify-center text-lg font-bold shrink-0">
-                    {{ $currentUser['avatar'] }}
+                    {{ $currentUser['avatar'] ?? '👤' }}
                 </div>
                 <div class="overflow-hidden">
                     <div class="text-xs font-bold text-white truncate">{{ $currentUser['name'] }}</div>
@@ -122,17 +126,18 @@
             <!-- Quick Role Switcher Inside Profile Box -->
             <form action="{{ route('switch.role') }}" method="POST" class="pt-1">
                 @csrf
-                <select name="role" onchange="this.form.submit()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-[11px] text-slate-300 font-bold focus:outline-none focus:border-slate-500">
-                    <option value="admin" {{ $currentUser['role'] === 'admin' ? 'selected' : '' }}>👑 الأدمن / الإدارة العليا</option>
-                    <option value="manager" {{ $currentUser['role'] === 'manager' ? 'selected' : '' }}>🏢 مدير العمليات والعقود</option>
-                    <option value="supervisor" {{ $currentUser['role'] === 'supervisor' ? 'selected' : '' }}>🛡️ مشرف الميدان والفنيين</option>
-                    <option value="technician" {{ $currentUser['role'] === 'technician' ? 'selected' : '' }}>👷 الفني / التقني</option>
-                    <option value="client" {{ $currentUser['role'] === 'client' ? 'selected' : '' }}>🏫 العميل (مدرسة/مصنع)</option>
+                <div class="text-[10px] text-slate-400 mb-1 font-bold">🔄 تبديل حساب العرض (Demo Role):</div>
+                <select name="role" onchange="this.form.submit()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-[11px] text-slate-300 font-bold focus:outline-none focus:border-blue-500">
+                    <option value="admin" {{ ($currentUser['role'] ?? '') === 'admin' ? 'selected' : '' }}>👑 الأدمن / المدير العام</option>
+                    <option value="manager" {{ ($currentUser['role'] ?? '') === 'manager' ? 'selected' : '' }}>🏢 مدير العمليات والعقود</option>
+                    <option value="supervisor" {{ ($currentUser['role'] ?? '') === 'supervisor' ? 'selected' : '' }}>🛡️ مشرف الميدان والفنيين</option>
+                    <option value="technician" {{ ($currentUser['role'] ?? '') === 'technician' ? 'selected' : '' }}>👷 مهندس/فني الفحص الميداني</option>
+                    <option value="client" {{ ($currentUser['role'] ?? '') === 'client' ? 'selected' : '' }}>🏫 العميل (منشأة/مدرسة/مصنع)</option>
                 </select>
             </form>
         </div>
 
-        <!-- Sidebar Navigation Menu (All Options Included) -->
+        <!-- Sidebar Navigation Menu -->
         <nav class="flex-1 px-3 space-y-1 overflow-y-auto text-xs font-bold">
             
             <!-- 1. Dashboard Overview -->
@@ -143,56 +148,81 @@
                 </div>
             </a>
 
-            <!-- 2. Contracts & Attachments & Sensitivity -->
+            <!-- 2. Facilities & Client Sites -->
+            <a href="{{ route('dashboard.facilities') }}" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all {{ request()->routeIs('dashboard.facilities') ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
+                <div class="flex items-center gap-3">
+                    <span class="text-base">🏢</span>
+                    <span>المنشآت والمواقع</span>
+                </div>
+                <span class="px-2 py-0.5 rounded-full text-[10px] bg-slate-800 text-slate-400 font-mono">{{ \App\Models\Facility::count() }}</span>
+            </a>
+
+            <!-- 3. Contracts & Attachments -->
             <a href="{{ route('dashboard.contracts') }}" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all {{ request()->routeIs('dashboard.contracts') ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
                 <div class="flex items-center gap-3">
                     <span class="text-base">🌲</span>
                     <span>إدارة العقود والمرفقات</span>
                 </div>
-                <span class="px-2 py-0.5 rounded-full text-[10px] bg-slate-800 text-slate-400 font-mono">148</span>
+                <span class="px-2 py-0.5 rounded-full text-[10px] bg-slate-800 text-slate-400 font-mono">{{ \App\Models\Contract::count() }}</span>
             </a>
 
-            <!-- 3. Visits, Zone Pricing & Spare Parts Alerts -->
-            <a href="{{ route('dashboard.visits') }}" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all {{ request()->routeIs('dashboard.visits') ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
+            <!-- 4. Maintenance & Site Requests -->
+            <a href="{{ route('dashboard.maintenance_requests.index') }}" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all {{ request()->routeIs('dashboard.maintenance_requests.*') ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
+                <div class="flex items-center gap-3">
+                    <span class="text-base">📥</span>
+                    <span>طلبات الصيانة والكشف</span>
+                </div>
+                @if($pendingReqsCount > 0)
+                    <span class="px-2 py-0.5 rounded-full text-[10px] bg-amber-500/20 text-amber-300 font-bold font-mono">{{ $pendingReqsCount }} جديد</span>
+                @endif
+            </a>
+
+            <!-- 5. Visits, Zone Pricing & Spare Parts Alerts -->
+            <a href="{{ route('dashboard.visits') }}" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all {{ request()->routeIs('dashboard.visits*') ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
                 <div class="flex items-center gap-3">
                     <span class="text-base">👷</span>
-                    <span>الزيارات وتسعير النطاق</span>
+                    <span>الزيارات والميدان والتسعير</span>
                 </div>
-                <span class="px-2 py-0.5 rounded-full text-[10px] bg-amber-500/20 text-amber-300 font-bold font-mono">تنبيهات (2)</span>
+                @if($unpaidVisitsCount > 0)
+                    <span class="px-2 py-0.5 rounded-full text-[10px] bg-amber-500/20 text-amber-300 font-bold font-mono">⚠️ قطع ({{ $unpaidVisitsCount }})</span>
+                @endif
             </a>
 
-            <!-- 4. Reports & Template Customization -->
-            <a href="{{ route('dashboard.reports') }}" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all {{ request()->routeIs('dashboard.reports') ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
+            <!-- 6. Inspection Reports & Certificates -->
+            <a href="{{ route('dashboard.reports') }}" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all {{ request()->routeIs('dashboard.reports*') ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
                 <div class="flex items-center gap-3">
                     <span class="text-base">📝</span>
-                    <span>نماذج وتقارير الفحص</span>
+                    <span>تقارير وشهادات الفحص</span>
                 </div>
             </a>
 
-            <!-- 5. Inter-Departmental Maintenance Requests -->
+            <!-- 7. Inter-Departmental Maintenance Requests -->
             <a href="{{ route('dashboard.internal_requests') }}" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all {{ request()->routeIs('dashboard.internal_requests') ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
                 <div class="flex items-center gap-3">
                     <span class="text-base">🔄</span>
                     <span>طلبات بين إدارات الشركة</span>
                 </div>
-                <span class="px-2 py-0.5 rounded-full text-[10px] bg-purple-500/20 text-purple-300 font-bold font-mono">4</span>
+                <span class="px-2 py-0.5 rounded-full text-[10px] bg-purple-500/20 text-purple-300 font-bold font-mono">{{ \App\Models\InternalRequest::where('status', 'pending')->count() }}</span>
             </a>
 
-            <!-- 6. Membership & Onboarding Requests -->
-            <a href="{{ route('dashboard.memberships') }}" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all {{ request()->routeIs('dashboard.memberships') ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
+            <!-- 8. Notifications & 48h Reminders -->
+            <a href="{{ route('dashboard.notifications.index') }}" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all {{ request()->routeIs('dashboard.notifications.*') ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
                 <div class="flex items-center gap-3">
-                    <span class="text-base">📥</span>
-                    <span>طلبات التسجيل الجديدة</span>
+                    <span class="text-base">🔔</span>
+                    <span>الإشعارات والتذكيرات</span>
                 </div>
-                <span class="px-2 py-0.5 rounded-full text-[10px] bg-emerald-500/20 text-emerald-400 font-bold font-mono">3</span>
+                @if($unreadNotifs > 0)
+                    <span class="px-2 py-0.5 rounded-full text-[10px] bg-red-500 text-white font-bold font-mono">{{ $unreadNotifs }}</span>
+                @endif
             </a>
 
-            <!-- 7. Role & Permission Management -->
-            <a href="{{ route('dashboard.permissions') }}" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all {{ request()->routeIs('dashboard.permissions') ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
+            <!-- 9. SaaS Configuration & Selling Settings -->
+            <a href="{{ route('dashboard.saas_settings') }}" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all {{ request()->routeIs('dashboard.saas_settings') ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
                 <div class="flex items-center gap-3">
                     <span class="text-base">⚙️</span>
-                    <span>إدارة الصلاحيات والأدوار</span>
+                    <span>إعدادات SaaS وبيع المنظومة</span>
                 </div>
+                <span class="px-2 py-0.5 rounded-full text-[10px] bg-emerald-500/20 text-emerald-400 font-bold">SaaS</span>
             </a>
 
         </nav>
@@ -215,10 +245,10 @@
 
     </aside>
 
-    <!-- MAIN APP CONTENT AREA (Scrollable, Full-Width on Mobile) -->
+    <!-- MAIN APP CONTENT AREA -->
     <div class="flex-1 flex flex-col min-w-0 h-full overflow-y-auto pb-16 lg:pb-0">
         
-        <!-- Top App Bar (Responsive Header) -->
+        <!-- Top App Bar -->
         <header class="h-16 sm:h-20 bg-white border-b border-slate-200 px-4 sm:px-8 flex items-center justify-between shrink-0 shadow-sm sticky top-0 z-30">
             
             <!-- Mobile Menu Toggle Button + Page Title -->
@@ -229,28 +259,40 @@
 
                 <div>
                     <h1 class="text-sm sm:text-lg font-bold text-slate-900 leading-tight">
-                        @yield('page_title', 'لوحة التحكم')
+                        @yield('page_title', 'لوحة تحكم ERP لشركات السلامة')
                     </h1>
-                    <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold inline-block sm:hidden">
-                        ● متصل بسلامة
-                    </span>
+                    <div class="flex items-center gap-2 text-[11px] text-slate-500">
+                        <span class="text-emerald-600 font-bold">● متصل بمنصة سلامة والدفاع المدني</span>
+                        <span>•</span>
+                        <span>نظام SaaS السحابي</span>
+                    </div>
                 </div>
             </div>
 
             <!-- Header Right Controls -->
             <div class="flex items-center gap-2 sm:gap-3">
                 
+                <!-- Notification Bell Button -->
+                <a href="{{ route('dashboard.notifications.index') }}" class="relative p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors" title="التنبيهات والتذكيرات">
+                    <span class="text-lg">🔔</span>
+                    @if($unreadNotifs > 0)
+                        <span class="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-600 text-white text-[10px] font-mono font-bold flex items-center justify-center animate-pulse">
+                            {{ $unreadNotifs }}
+                        </span>
+                    @endif
+                </a>
+
                 <!-- Quick Role Switch Pill -->
                 <div class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs">
-                    <span class="text-slate-400">الحساب:</span>
+                    <span class="text-slate-400">الدور النشط:</span>
                     <span class="font-bold text-slate-900">{{ $currentUser['title'] }}</span>
                 </div>
 
                 <!-- Emergency Contact Badge -->
                 <a href="tel:920000000" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-xs font-bold font-mono transition-colors">
                     <span>🚨</span>
-                    <span class="hidden sm:inline">طوارئ:</span>
-                    <span>9200-NABICO</span>
+                    <span class="hidden sm:inline">طوارئ السلامة:</span>
+                    <span>9200-SAFETY</span>
                 </a>
 
             </div>
@@ -268,44 +310,52 @@
             </div>
         @endif
 
-        <!-- Main View Content (Responsive Padding) -->
+        @if(session('error'))
+            <div class="mx-4 sm:mx-8 mt-4 p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-900 text-xs font-bold flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span class="text-base">⚠️</span>
+                    <span>{{ session('error') }}</span>
+                </div>
+                <button onclick="this.parentElement.remove()" class="text-red-700 hover:text-red-900 font-bold">✕</button>
+            </div>
+        @endif
+
+        <!-- Main View Content -->
         <main class="p-4 sm:p-6 lg:p-8 flex-1">
             @yield('content')
         </main>
 
-        <!-- Simple Dashboard Footer -->
+        <!-- Dashboard Footer -->
         <footer class="px-4 sm:px-8 py-4 border-t border-slate-200 bg-white text-[11px] sm:text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-2 shrink-0">
-            <div>© {{ date('Y') }} شركة نبيكو العربية للتشغيل والصيانة. جميع الحقوق محفوظة.</div>
-            <div class="flex gap-3">
-                <span>كود البناء السعودي SBC 801</span>
+            <div>© {{ date('Y') }} منصة SaaS المتكاملة لشركات السلامة وأنظمة الإطفاء والإنذار. جميع الحقوق محفوظة.</div>
+            <div class="flex gap-3 font-semibold">
+                <span class="text-slate-700">كود البناء السعودي SBC 801</span>
                 <span>•</span>
-                <span>منصة سلامة</span>
+                <span class="text-slate-700">بوابة سلامة الإلكترونية</span>
+                <span>•</span>
+                <span class="text-blue-600">جاهز للتسويق والبيع التجاري (SaaS Solution)</span>
             </div>
         </footer>
 
     </div>
 
-    <!-- MOBILE BOTTOM APP BAR (Native App Feel for Field Staff) -->
+    <!-- MOBILE BOTTOM APP BAR -->
     <nav class="lg:hidden fixed bottom-0 inset-x-0 bg-slate-900 border-t border-slate-800 flex items-center justify-around py-2 px-1 z-30 text-[10px] font-bold text-slate-400">
         <a href="{{ route('dashboard.home') }}" class="flex flex-col items-center gap-1 py-1 px-2 rounded-lg {{ request()->routeIs('dashboard.home') ? 'text-blue-400' : 'hover:text-white' }}">
             <span class="text-base">📊</span>
             <span>الرئيسية</span>
         </a>
-        <a href="{{ route('dashboard.contracts') }}" class="flex flex-col items-center gap-1 py-1 px-2 rounded-lg {{ request()->routeIs('dashboard.contracts') ? 'text-blue-400' : 'hover:text-white' }}">
-            <span class="text-base">🌲</span>
-            <span>العقود</span>
+        <a href="{{ route('dashboard.maintenance_requests.index') }}" class="flex flex-col items-center gap-1 py-1 px-2 rounded-lg {{ request()->routeIs('dashboard.maintenance_requests.*') ? 'text-blue-400' : 'hover:text-white' }}">
+            <span class="text-base">📥</span>
+            <span>الطلبات</span>
         </a>
-        <a href="{{ route('dashboard.visits') }}" class="flex flex-col items-center gap-1 py-1 px-2 rounded-lg {{ request()->routeIs('dashboard.visits') ? 'text-blue-400' : 'hover:text-white' }}">
+        <a href="{{ route('dashboard.visits') }}" class="flex flex-col items-center gap-1 py-1 px-2 rounded-lg {{ request()->routeIs('dashboard.visits*') ? 'text-blue-400' : 'hover:text-white' }}">
             <span class="text-base">👷</span>
             <span>الزيارات</span>
         </a>
-        <a href="{{ route('dashboard.reports') }}" class="flex flex-col items-center gap-1 py-1 px-2 rounded-lg {{ request()->routeIs('dashboard.reports') ? 'text-blue-400' : 'hover:text-white' }}">
+        <a href="{{ route('dashboard.reports') }}" class="flex flex-col items-center gap-1 py-1 px-2 rounded-lg {{ request()->routeIs('dashboard.reports*') ? 'text-blue-400' : 'hover:text-white' }}">
             <span class="text-base">📝</span>
-            <span>النماذج</span>
-        </a>
-        <a href="{{ route('dashboard.internal_requests') }}" class="flex flex-col items-center gap-1 py-1 px-2 rounded-lg {{ request()->routeIs('dashboard.internal_requests') ? 'text-blue-400' : 'hover:text-white' }}">
-            <span class="text-base">🔄</span>
-            <span>الطلبات</span>
+            <span>التقارير</span>
         </a>
         <button onclick="toggleSidebar()" class="flex flex-col items-center gap-1 py-1 px-2 rounded-lg hover:text-white text-slate-300">
             <span class="text-base">☰</span>

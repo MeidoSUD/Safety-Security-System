@@ -168,7 +168,7 @@
 
                 <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1">كلمة المرور</label>
-                    <input type="password" name="password" required value="password123" dir="ltr" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-slate-900 focus:bg-white text-right font-mono">
+                    <input type="password" name="password" required value="password" dir="ltr" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-slate-900 focus:bg-white text-right font-mono">
                 </div>
 
                 <div class="flex items-center justify-between text-xs">
