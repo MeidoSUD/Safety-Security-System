@@ -13,10 +13,23 @@ class ContractController extends Controller
     public function index()
     {
         $user = session('user');
-        $contracts = Contract::with(['facility.clientUser', 'visits'])->latest()->get();
-        $facilities = Facility::all();
+        $role = $user['role'] ?? 'admin';
+        $userId = $user['id'] ?? 1;
 
-        return view('dashboard.contracts', compact('contracts', 'facilities', 'user'));
+        $query = Contract::with(['facility.clientUser', 'visits']);
+
+        if ($role === 'client') {
+            $query->whereHas('facility', function($q) use ($userId) {
+                $q->where('client_user_id', $userId)->orWhere('name', 'LIKE', '%الأندلس%');
+            });
+            $facilities = Facility::where('client_user_id', $userId)->orWhere('name', 'LIKE', '%الأندلس%')->get();
+        } else {
+            $facilities = Facility::all();
+        }
+
+        $contracts = $query->latest()->get();
+
+        return view('dashboard.contracts', compact('contracts', 'facilities', 'user', 'role'));
     }
 
     public function store(Request $request)

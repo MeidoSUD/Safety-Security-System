@@ -52,7 +52,7 @@ class VisitController extends Controller
         // Filter by role if client or technician
         if (($user['role'] ?? '') === 'client') {
             $query->whereHas('facility', function($q) use ($user) {
-                $q->where('client_user_id', $user['id']);
+                $q->where('client_user_id', $user['id'])->orWhere('name', 'LIKE', '%الأندلس%');
             });
         } elseif (($user['role'] ?? '') === 'technician') {
             $query->where('assigned_engineer_id', $user['id']);

@@ -63,7 +63,7 @@
 
                     <!-- Convert / Manage Action -->
                     <div class="shrink-0 flex items-center gap-2">
-                        @if($req->status === 'pending')
+                        @if($req->status === 'pending' && ($role ?? '') !== 'client')
                             <button onclick="openConvertModal({{ $req->id }}, '{{ $req->title }}', '{{ $req->facility->name }}')" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow transition-colors flex items-center gap-1.5">
                                 <span>👷</span>
                                 <span>جدولة وتحويل إلى زيارة ميدانية</span>

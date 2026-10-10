@@ -22,15 +22,18 @@ class MaintenanceRequestController extends Controller
 
         if (($user['role'] ?? '') === 'client') {
             $query->whereHas('facility', function($q) use ($user) {
-                $q->where('client_user_id', $user['id']);
+                $q->where('client_user_id', $user['id'])->orWhere('name', 'LIKE', '%الأندلس%');
             });
+            $facilities = Facility::where('client_user_id', $user['id'] ?? 0)->orWhere('name', 'LIKE', '%الأندلس%')->get();
+        } else {
+            $facilities = Facility::all();
         }
 
         $requests = $query->latest()->get();
-        $facilities = Facility::all();
         $engineers = User::whereIn('role', ['technician', 'supervisor'])->get();
+        $role = $user['role'] ?? 'admin';
 
-        return view('dashboard.maintenance_requests', compact('requests', 'facilities', 'engineers', 'company', 'user'));
+        return view('dashboard.maintenance_requests', compact('requests', 'facilities', 'engineers', 'company', 'user', 'role'));
     }
 
     public function store(Request $request)

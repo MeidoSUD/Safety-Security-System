@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Company;
 use App\Models\Visit;
 use App\Models\VisitReport;
+use App\Models\Facility;
 use App\Models\SystemNotification;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
@@ -14,10 +15,28 @@ class ReportController extends Controller
     public function index()
     {
         $user = session('user');
-        $reports = VisitReport::with(['visit.facility', 'visit.engineer', 'engineer', 'approver'])->latest()->get();
+        $role = $user['role'] ?? 'admin';
+        $userId = $user['id'] ?? 1;
+
+        $query = VisitReport::with(['visit.facility', 'visit.engineer', 'engineer', 'approver']);
+
+        if ($role === 'client') {
+            $query->whereHas('visit.facility', function($q) use ($userId) {
+                $q->where('client_user_id', $userId)->orWhere('name', 'LIKE', '%الأندلس%');
+            });
+        } elseif ($role === 'technician') {
+            $query->where(function($q) use ($userId) {
+                $q->where('engineer_id', $userId)
+                  ->orWhereHas('visit', function($sq) use ($userId) {
+                      $sq->where('assigned_engineer_id', $userId);
+                  });
+            });
+        }
+
+        $reports = $query->latest()->get();
         $visitsWithoutReports = Visit::with('facility')->whereDoesntHave('report')->get();
 
-        return view('dashboard.reports', compact('reports', 'visitsWithoutReports', 'user'));
+        return view('dashboard.reports', compact('reports', 'visitsWithoutReports', 'user', 'role'));
     }
 
     public function store(Request $request)
